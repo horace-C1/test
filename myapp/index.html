@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IndexedDB Local App</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#317EFB">
+  <script src="https://cdn.jsdelivr.net/npm/dexie@4.0.8/dist/dexie.min.js"></script>
+  <style>
+    body { font-family: sans-serif; max-width: 400px; margin: 40px auto; padding: 1rem; }
+    input, button { width: 100%; font-size: 1.1rem; margin-top: 10px; padding: 8px; }
+    .note { margin-top: 10px; background: #f0f0f0; padding: 10px; border-radius: 6px; }
+  </style>
+</head>
+<body>
+  <h2>Offline Notes App (IndexedDB)</h2>
+  <p>Type something and save — it’ll be stored locally, even offline.</p>
+
+  <input id="userInput" type="text" placeholder="Type a note...">
+  <button id="saveBtn">Save Note</button>
+
+  <div id="notesList"></div>
+
+  <script>
+    // ========== Dexie (IndexedDB) Setup ==========
+    const db = new Dexie('myNotesDB');
+    db.version(1).stores({ notes: '++id, text, createdAt' });
+
+    const input = document.getElementById('userInput');
+    const saveBtn = document.getElementById('saveBtn');
+    const notesList = document.getElementById('notesList');
+
+    // Save a new note
+    async function saveNote() {
+      const text = input.value.trim();
+      if (!text) return;
+      await db.notes.add({ text, createdAt: new Date() });
+      input.value = '';
+      await loadNotes();
+    }
+
+    // Load and display notes
+    async function loadNotes() {
+      const notes = await db.notes.orderBy('createdAt').reverse().toArray();
+      notesList.innerHTML = notes.map(n =>
+        `<div class="note">${n.text}</div>`
+      ).join('');
+    }
+
+    saveBtn.addEventListener('click', saveNote);
+    loadNotes(); // load on start
+
+    // ========== Register Service Worker for offline ==========
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js');
+    }
+  </script>
+</body>
+</html>
